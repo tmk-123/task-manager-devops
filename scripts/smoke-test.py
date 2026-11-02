@@ -19,7 +19,9 @@ status, task = request("POST", "/api/tasks", {"title": "Smoke test", "status": "
 assert status == 201, status
 path = "/api/tasks/" + str(task["id"])
 try:
-    assert request("GET", path)[1]["title"] == "Smoke test"
+    fetched = request("GET", path)[1]
+    assert fetched["title"] == "Smoke test"
+    assert fetched["createdAt"] == task["createdAt"], "Timestamp changed after saving to database"
     status, updated = request("PUT", path, {"title": "Smoke test", "status": "DONE"})
     assert status == 200 and updated["status"] == "DONE", updated
     page = request("GET", "/api/tasks?status=DONE&size=100")[1]

@@ -2,10 +2,13 @@
 
 Ngày 02/11/2026:
 
-- `mvn -B verify`: BUILD SUCCESS; 5 tests, 0 failures, 0 errors, 0 skipped.
-- Chạy bằng JDK 19 có sẵn trên máy, biên dịch target Java 17. Docker và CI cấu hình JDK 17; chưa thực thi trên JDK 17 tại máy này.
-- Đã parse các file YAML của ứng dụng, Compose và workflows; kiểm tra cú pháp Python và encoding UTF-8 của tài liệu.
-- Chưa chạy Docker build/Compose/MySQL/Nginx tại máy này vì không có lệnh Docker.
-- GitHub Actions, GHCR publishing và SSH deployment chưa được chạy. Cần repository/server và cấu hình trong DEPLOYMENT.md.
+- `mvn -B -ntp verify`: BUILD SUCCESS; 5 tests, 0 failures, 0 errors. Chạy trên JDK 19, biên dịch target Java 17.
+- Docker multi-stage build thành công với JDK 17. Maven dùng BuildKit cache; bỏ bước dependency:go-offline tải nhiều plugin không cần thiết.
+- Docker Compose chạy MySQL 8.4, Spring Boot API và Nginx. Health qua Nginx: `UP`.
+- `python scripts/smoke-test.py`: PASS cho health, tạo, đọc, sửa, lọc và xóa task qua Nginx/MySQL thật. Có kiểm tra createdAt giữ nguyên khi đọc lại sau khi tạo.
+- Đã tạo lại toàn bộ container bằng down/up, giữ volume MySQL; task mẫu id=2 vẫn còn. Dữ liệu mẫu vẫn được giữ để thực hành.
+- Phát hiện độ chính xác timestamp khác nhau giữa Instant và TIMESTAMP(6); đã chuẩn hóa về microsecond và thêm kiểm thử hồi quy.
+- MySQL khởi tạo lần đầu mất hơn thời gian chờ cũ trên máy này. Đã thêm start_period 120s, 60 lần retry và tăng thời gian chờ Compose/CI/deploy lên 600 giây.
+- Compose config đã kiểm tra cho cả bản local và bản deploy. GitHub Actions, GHCR publishing và SSH deployment chưa được chạy trong phiên này.
 
-YAML parse chỉ kiểm tra cú pháp, không chứng minh workflow hoặc cấu hình container chạy thành công. Job integration được chuẩn bị để kiểm tra stack thật trên GitHub Actions.
+Ứng dụng đang mở ở `http://localhost:8080/api/tasks`; health ở `http://localhost:8080/health`. Không có giao diện web ở đường dẫn `/`.

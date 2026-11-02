@@ -13,7 +13,8 @@ services:
       test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql -h 127.0.0.1 -u$$MYSQL_USER -D taskmanager -e 'SELECT 1'"]
       interval: 5s
       timeout: 5s
-      retries: 30
+      start_period: 120s
+      retries: 60
     restart: unless-stopped
   api:
     image: ${APP_IMAGE:?Set APP_IMAGE to a published GHCR image}

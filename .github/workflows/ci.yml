@@ -29,14 +29,14 @@ jobs:
         run: |
           cp .env.example .env
           docker compose config --quiet
-          docker compose up -d --build --wait --wait-timeout 240
+          docker compose up -d --build --wait --wait-timeout 600
       - name: Test through Nginx
         run: python3 scripts/smoke-test.py
       - name: Check persistence after recreating services
         run: |
           task_id=$(curl -fsS -H 'Content-Type: application/json' -d '{"title":"Persistence check","status":"TODO"}' http://localhost:8080/api/tasks | python3 -c 'import sys,json; print(json.load(sys.stdin)["id"])')
           docker compose down
-          docker compose up -d --wait --wait-timeout 240
+          docker compose up -d --wait --wait-timeout 600
           curl -fsS "http://localhost:8080/api/tasks/$task_id" | python3 -c 'import sys,json; assert json.load(sys.stdin)["title"] == "Persistence check"'
           curl -fsS -X DELETE "http://localhost:8080/api/tasks/$task_id"
       - name: Logs

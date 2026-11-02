@@ -27,7 +27,9 @@ class TaskApiTest {
             .andExpect(status().isCreated()).andExpect(header().exists("Location"))
             .andExpect(jsonPath("$.createdAt").isNotEmpty()).andReturn();
         long id = json.readTree(response.getResponse().getContentAsString()).get("id").asLong();
-        mvc.perform(get("/api/tasks/" + id)).andExpect(status().isOk()).andExpect(jsonPath("$.title").value("Learn Docker"));
+        String createdAt = json.readTree(response.getResponse().getContentAsString()).get("createdAt").asText();
+        mvc.perform(get("/api/tasks/" + id)).andExpect(status().isOk()).andExpect(jsonPath("$.title").value("Learn Docker"))
+            .andExpect(jsonPath("$.createdAt").value(createdAt));
         mvc.perform(put("/api/tasks/" + id).contentType("application/json").content(payload("DONE")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("DONE"));
         mvc.perform(get("/api/tasks").param("status", "DONE")).andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(1));

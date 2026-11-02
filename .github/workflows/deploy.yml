@@ -47,7 +47,7 @@ jobs:
           test -f .env || { echo 'Create ~/task-manager/.env on server first'; exit 1; }
           docker compose -f compose.deploy.yaml config --quiet
           docker compose -f compose.deploy.yaml pull
-          docker compose -f compose.deploy.yaml up -d --wait --wait-timeout 240
+          docker compose -f compose.deploy.yaml up -d --wait --wait-timeout 600
           docker compose -f compose.deploy.yaml restart nginx
           curl --fail --retry 10 --retry-delay 3 --retry-all-errors "http://localhost:$(sed -n 's/^HTTP_PORT=//p' .env)/health"
           REMOTE

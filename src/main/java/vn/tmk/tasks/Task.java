@@ -1,6 +1,7 @@
 package vn.tmk.tasks;
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 @Entity
 @Table(name = "tasks")
 public class Task {
@@ -16,7 +17,7 @@ public class Task {
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
     protected Task() {}
-    public Task(TaskRequest request) { update(request); createdAt = Instant.now(); }
+    public Task(TaskRequest request) { update(request); createdAt = Instant.now().truncatedTo(ChronoUnit.MICROS); }
     public void update(TaskRequest request) {
         title = request.title().trim();
         description = request.description() == null ? "" : request.description().trim();
