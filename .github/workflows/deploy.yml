@@ -1,0 +1,56 @@
+name: Deploy to Linux server
+on:
+  workflow_dispatch:
+    inputs:
+      image_sha:
+        description: Full commit SHA of an image published by successful CI
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: deploy-lab
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: lab
+    steps:
+      - uses: actions/checkout@v5
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+      - name: Upload configuration and deploy published image
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          IMAGE_SHA: ${{ inputs.image_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$IMAGE_SHA" =~ ^[a-f0-9]{40}$ ]] || { echo 'Expected full 40-character commit SHA'; exit 1; }
+          [[ "$DEPLOY_HOST" =~ ^[a-zA-Z0-9.-]+$ ]] || exit 1
+          [[ "$DEPLOY_USER" =~ ^[a-zA-Z_][a-zA-Z0-9_-]*$ ]] || exit 1
+          target="$DEPLOY_USER@$DEPLOY_HOST"
+          image="ghcr.io/${GITHUB_REPOSITORY,,}:$IMAGE_SHA"
+          ssh "$target" 'mkdir -p ~/task-manager/nginx'
+          scp compose.deploy.yaml "$target:task-manager/compose.deploy.yaml"
+          scp nginx/default.conf "$target:task-manager/nginx/default.conf"
+          ssh "$target" "APP_IMAGE='$image' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd ~/task-manager
+          test -f .env || { echo 'Create ~/task-manager/.env on server first'; exit 1; }
+          docker compose -f compose.deploy.yaml config --quiet
+          docker compose -f compose.deploy.yaml pull
+          docker compose -f compose.deploy.yaml up -d --wait --wait-timeout 240
+          docker compose -f compose.deploy.yaml restart nginx
+          curl --fail --retry 10 --retry-delay 3 --retry-all-errors "http://localhost:$(sed -n 's/^HTTP_PORT=//p' .env)/health"
+          REMOTE
+      - name: Remove SSH key
+        if: always()
+        run: rm -f ~/.ssh/id_ed25519
